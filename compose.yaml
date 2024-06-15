@@ -1,0 +1,30 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ${DOCKERFILE:-dev.Dockerfile}
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION}
+        - PORT=${PORT}
+        - NUM_WORKERS=${NUM_WORKERS}
+        - NUM_THREADS=${NUM_THREADS}
+        - MAX_REQUESTS=${MAX_REQUESTS}
+        - MAX_REQUESTS_JITTER=${MAX_REQUESTS_JITTER}
+        - PRIVATE_ARTIFACT_REPOSITORY=${PRIVATE_ARTIFACT_REPOSITORY}
+    ports:
+      - ${PORT}:${PORT}
+    expose:
+      - ${PORT}
+    deploy:
+      resources:
+        reservations:
+          cpus: '1.5'
+          memory: '2gb'
+        limits:
+          cpus: '1'
+          memory: '2gb'
+    develop:
+      watch:
+        - path: ./src
+          action: sync+restart
+          target: /app/src

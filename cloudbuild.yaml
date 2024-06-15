@@ -1,0 +1,58 @@
+steps:
+  
+  # Docker Build
+  - name: "gcr.io/cloud-builders/docker"
+    id: "docker_build"
+    dir: ${_BASE_DIR}
+    args:
+      - "build"
+      - "--build-arg"
+      - "PYTHON_VERSION=3.12"
+      - "--network=cloudbuild"
+      - "-t"
+      - "us-central1-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE_NAME}:latest"
+      - "."
+    env:
+      - "PORT=${_PORT}"
+      - "NUM_WORKERS=1"
+      - "NUM_THREADS=1"
+      - "MAX_REQUESTS=100"
+      - "MAX_REQUESTS_JITTER=10"
+      - "UMA_ARTIFACT_REPO_AUTH=https://pypi.org/simple"
+  
+  # Docker Push
+  - name: "gcr.io/cloud-builders/docker"
+    id: "docker_push"
+    dir: ${_BASE_DIR}
+    args:
+      - "push"
+      - "us-central1-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE_NAME}:latest"
+      
+  # Cloud Run Deploy
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: "gcloud_run_deploy"
+    dir: ${_BASE_DIR}
+    args:
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image=us-central1-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE_NAME}:latest"
+      - "--region=us-central1"
+      - "--memory=1Gi"
+      - "--cpu=1000m"
+      - "--min-instances=0"
+      - "--max-instances=10"
+      - "--concurrency=1"
+      - "--ingress=all"
+      - "--platform=managed"
+      - "--timeout=600"
+      - "--port=${_PORT}"
+      - "--set-env-vars"
+      - "CLOUD=True,PROJECT_ID=${PROJECT_ID}"
+      - "--allow-unauthenticated"
+
+substitutions:
+  _BASE_DIR: .
+  _SERVICE_NAME: my-template
+  _REPO: docker-repo
+  _PORT: "8080"
