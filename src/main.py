@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 # ===> FastAPI
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 # ===> Observability Logs
 from src.core.logger import init_logger_config
@@ -16,8 +17,17 @@ from src.core.tracer import trace_provider, tracer, trace
 from src.models.base.router import router as base_router
 
 
+allowed_origins = ["*"]
+allowed_methods = ["GET", "POST"]
+allowed_headers = ["Content-Type"]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+        Funcion que se ejecuta antes del manejo de la PRIMERA request
+        y despues de la ULTIMA response.
+    """
     init_logger_config()
     yield
 
@@ -80,6 +90,13 @@ async def add_process_time_header(request: Request, call_next: Callable) -> Resp
     response: Response = await call_next(request)
     response.headers["x-process-time"] = str(time.time() - start)
     return response
+
+app.middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_methods=allowed_methods,
+    allow_headers=allowed_headers,
+)
 
 @app.get("/", response_class=JSONResponse)
 async def root(request: Request):
